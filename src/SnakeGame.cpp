@@ -143,7 +143,7 @@ enum Difficulty {
  */
 struct CliArgs {
 	Difficulty difficulty;
-	bool sync_framerate;
+	bool sync_frame_rate;
 	int esc_delay;
 };
 
@@ -155,7 +155,7 @@ struct CliArgs {
  */
 CliArgs parse_cli_args(int argc, char** argv) {
 	Difficulty difficulty = NORMAL;
-	bool sync_framerate = false;
+	bool sync_frame_rate = false;
 	int esc_delay = 100;
 
 	bool display_help = false;
@@ -184,9 +184,9 @@ CliArgs parse_cli_args(int argc, char** argv) {
 			difficulty = HARD;
 			di++;
 		}
-		// next try sync_framerate
-		else if (arg.compare("--sync_framerate") == 0 || arg.compare("-s") == 0) {
-			sync_framerate = true;
+		// next try sync_frame_rate
+		else if (arg.compare("--sync_frame_rate") == 0 || arg.compare("-s") == 0) {
+			sync_frame_rate = true;
 			si++;
 		}
 		// else  try esc_delay
@@ -222,12 +222,12 @@ CliArgs parse_cli_args(int argc, char** argv) {
 		}
 		std::cout << std::endl;
 		std::cout << "Usage: SnakeGame [ {easy|normal|hard} --esc_delay=milliseconds";
-		std::cout << " --sync_framerate ]" << std::endl;
+		std::cout << " --sync_frame_rate ]" << std::endl;
 		std::cout << std::endl;
 		std::cout << "Difficulty setting defaults to \"normal\"." << std::endl;
 		std::cout << "\"--esc_delay\" (-eMilliseconds) defaults to 100, and must be >= 100.";
 		std::cout << std::endl;
-		std::cout << "\"--sync_framerate\" (-s) synchronizes horizontal and vertical frame rates.";
+		std::cout << "\"--sync_frame_rate\" (-s) synchronizes horizontal and vertical frame rates.";
 		std::cout << std::endl;
 		std::cout << std::endl;
 		std::cout << "Frame rates are by default faster horizontally to offset differences";
@@ -236,7 +236,7 @@ CliArgs parse_cli_args(int argc, char** argv) {
 		std::cout << " larger esc_delay." << std::endl;
 		exit(0);
 	}
-	CliArgs cli_args = { difficulty, sync_framerate, esc_delay };
+	CliArgs cli_args = { difficulty, sync_frame_rate, esc_delay };
 	return cli_args;
 }
 
@@ -252,7 +252,7 @@ void snake_game(int argc, char** argv) {
 	CliArgs cli_args = parse_cli_args(argc, argv);
 
 	Difficulty difficulty = cli_args.difficulty;
-	bool sync_framerate = cli_args.sync_framerate;
+	bool sync_frame_rate = cli_args.sync_frame_rate;
 	int esc_delay = cli_args.esc_delay;
 
 	long sleep_ms_horizontal;
@@ -274,7 +274,7 @@ void snake_game(int argc, char** argv) {
 		exit(0);
 	}
 
-	if (sync_framerate) {
+	if (sync_frame_rate) {
 		sleep_ms_horizontal = sleep_ms_vertical;
 	}
 
