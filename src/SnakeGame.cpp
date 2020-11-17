@@ -26,7 +26,7 @@
  */
 void* read_user_input(void* vargp) {
 	Snake* snake = (Snake*) vargp;
-	while (true) {
+	while (!snake->game_over) {
 		int input = getch();
 		switch (input) {
 		case A_KEY_A:
@@ -74,6 +74,9 @@ void* read_user_input(void* vargp) {
 			endwin();
 			exit(0);
 			break;
+//		case A_KEY_C:
+//			snake->segment_count = COLS * LINES - 1;
+//			break;
 		}
 	}
 	return NULL;
@@ -117,15 +120,15 @@ enum Color {
 void init_colors() {
 	start_color();
 	use_default_colors();
-	init_pair(RED,     COLOR_RED,     -1);
-	init_pair(GREEN,   COLOR_GREEN,   -1);
-	init_pair(YELLOW,  COLOR_YELLOW,  -1);
-	init_pair(GRAY,    COLOR_CYAN,    -1);
-	init_pair(BLUE,    COLOR_BLUE,    -1);
-	init_pair(CYAN,    COLOR_CYAN,    -1);
-	init_pair(MAGENTA, COLOR_MAGENTA, -1);
-	init_pair(WHITE,   COLOR_WHITE,   -1);
-	init_pair(BLACK,   COLOR_BLACK,   -1);
+	init_pair(RED,     COLOR_RED,     COLOR_BLACK);
+	init_pair(GREEN,   COLOR_GREEN,   COLOR_BLACK);
+	init_pair(YELLOW,  COLOR_YELLOW,  COLOR_BLACK);
+	init_pair(GRAY,    COLOR_CYAN,    COLOR_BLACK);
+	init_pair(BLUE,    COLOR_BLUE,    COLOR_BLACK);
+	init_pair(CYAN,    COLOR_CYAN,    COLOR_BLACK);
+	init_pair(MAGENTA, COLOR_MAGENTA, COLOR_BLACK);
+	init_pair(WHITE,   COLOR_WHITE,   COLOR_BLACK);
+	init_pair(BLACK,   COLOR_BLACK,   COLOR_BLACK);
 }
 
 /**
@@ -157,7 +160,7 @@ CliArgs parse_cli_args(int argc, char** argv) {
 
 	bool display_help = false;
 	bool unknown_arg = false;
-	std::string unknown_arg_str = NULL;
+	std::string unknown_arg_str;
 
 	std::string esc_delay_prefix = "--esc_delay=";
 	std::string e_prefix = "-e";
@@ -215,8 +218,9 @@ CliArgs parse_cli_args(int argc, char** argv) {
 		} else if (argc > 4) {
 			std::cout << "Too many arguments." << std::endl;
 		} else if (esc_delay < 100) {
-			std::cout << "Too many arguments." << std::endl;
+			std::cout << "esc_delay of " << esc_delay << " is too small." << std::endl;
 		}
+		std::cout << std::endl;
 		std::cout << "Usage: SnakeGame [ {easy|normal|hard} --esc_delay=milliseconds";
 		std::cout << " --sync_framerate ]" << std::endl;
 		std::cout << std::endl;
@@ -235,6 +239,8 @@ CliArgs parse_cli_args(int argc, char** argv) {
 	CliArgs cli_args = { difficulty, sync_framerate, esc_delay };
 	return cli_args;
 }
+
+
 
 /**
  * Run the game.
@@ -284,6 +290,14 @@ void snake_game(int argc, char** argv) {
 	int width = COLS;
 	int height = LINES;
 
+	// init the background color
+	attron(COLOR_PAIR(BLACK));
+	for (int y = 0; y < height; y++) {
+		for (int x = 0; x < width; x++) {
+			mvaddch(y, x, ' ');
+		}
+	}
+
 	// initialize RNG
 	random_engine.seed(time(0));
 	width_dist = std::uniform_int_distribution<int>(0, width - 1);
@@ -312,8 +326,8 @@ void snake_game(int argc, char** argv) {
 	refresh();
 
 	// read user input on a separate thread.
-	pthread_t thread_id;
-	pthread_create(&thread_id, NULL, read_user_input, (void*) snake);
+	pthread_t read_input_thread;
+	pthread_create(&read_input_thread, NULL, read_user_input, (void*) snake);
 
 	// game loop
 	while (true) {
@@ -338,7 +352,13 @@ void snake_game(int argc, char** argv) {
 
 		// display game over screen
 		if (out_of_bounds || snake_collision) {
-			clear();
+			// clear the screen
+			attron(COLOR_PAIR(BLACK));
+			for (int y = 0; y < height; y++) {
+				for (int x = 0; x < width; x++) {
+					mvaddch(y, x, ' ');
+				}
+			}
 			std::string game_over_text = "Game Over";
 			int len = game_over_text.length();
 			int gx = width / 2 - len / 2;
@@ -362,7 +382,10 @@ void snake_game(int argc, char** argv) {
 			addstr(score_value.c_str());
 
 			refresh();
-			sleep(2);
+
+			snake->game_over = true;
+			pthread_join(read_input_thread, NULL);
+
 			endwin();
 			exit(0);
 		}
@@ -374,17 +397,46 @@ void snake_game(int argc, char** argv) {
 			// check for victory condition
 			int max_length = width * height;
 			if (snake->segment_count == max_length) {
-				clear();
-				std::string victory_text = "Game Over";
+				// clear the screen
+				attron(COLOR_PAIR(BLACK));
+				for (int y = 0; y < height; y++) {
+					for (int x = 0; x < width; x++) {
+						mvaddch(y, x, ' ');
+					}
+				}
+				std::string victory_text = "Congratulations,";
 				int len = victory_text.length();
 				int gx = width / 2 - len / 2;
-				int gy = height / 2;
+				int gy = height / 2 - 1;
 
-				attron(COLOR_PAIR(GREEN));
+				attron(COLOR_PAIR(WHITE));
 				mvaddstr(gy, gx, victory_text.c_str());
 
+				victory_text = "you win!";
+				len = victory_text.length();
+				gx = width / 2 - len / 2;
+				gy += 1;
+
+				mvaddstr(gy, gx, victory_text.c_str());
+
+				int score = snake->segment_count;
+				std::string score_key = "Maximum Score: ";
+				std::string score_value = std::to_string(score);
+				len = score_key.length() + score_value.length();
+				gx = width / 2 - len / 2;
+				gy += 1;
+
+				move(gy, gx);
+				addstr(score_key.c_str());
+
+				attron(COLOR_PAIR(GREEN));
+				addstr(score_value.c_str());
+
 				refresh();
-				sleep(2);
+
+				snake->game_over = true;
+				pthread_join(read_input_thread, NULL);
+
 				endwin();
 				exit(0);
 			}

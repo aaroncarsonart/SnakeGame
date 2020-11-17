@@ -58,6 +58,7 @@ struct Snake {
 	Segment* tail = NULL;
 	int segment_count = 0;
 	bool pause = false;
+	bool game_over = false;
 
 	/**
 	 * Get the next Point towards which the Snake should move,
