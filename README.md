@@ -16,6 +16,6 @@ Optional parameters:
 - `--sync_frame_rate`: synchronizes the horizontal and vertical frame rates.  (By default the horizontal frame rate is faster to compensate for the difference in most font's width and heights.)
 
 ## Controls
-- Movement: use the arrow keys, `aswd`, or `hjkl`.
-- Pause: `space` or `p`
-- Quit: `esc` or `q`
+- __Movement:__ use the arrow keys, `aswd`, or `hjkl`.
+- __Pause:__ `space` or `p`
+- __Quit:__ `esc` or `q`
