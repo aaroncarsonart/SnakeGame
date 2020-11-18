@@ -15,7 +15,7 @@
 /**
  * Represents the four basic directions.
  */
-enum Direction {
+enum class Direction {
 	UP, DOWN, LEFT, RIGHT
 };
 
@@ -30,9 +30,9 @@ std::string direction_name(Direction d);
  * Represents a single segment of the snake.
  */
 struct Segment {
-	Point* point = NULL;
-	Segment* next = NULL;
-	Segment* prev = NULL;
+	Point* point = nullptr;
+	Segment* next = nullptr;
+	Segment* prev = nullptr;
 	int index;
 	Segment();
 
@@ -53,9 +53,9 @@ struct Segment {
  * Hold information for the snake.
  */
 struct Snake {
-	Direction direction = RIGHT;
-	Segment* head = NULL;
-	Segment* tail = NULL;
+	Direction direction = Direction::RIGHT;
+	Segment* head = nullptr;
+	Segment* tail = nullptr;
 	int segment_count = 0;
 	bool pause = false;
 	bool game_over = false;

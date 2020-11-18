@@ -12,15 +12,15 @@
  * @param d The Direction to get the name for.
  * @return The name of the input Direction.
  */
-std::string direction_name(Direction d) {
-	switch (d) {
-	case UP:
+std::string direction_name(Direction direction) {
+	switch (direction) {
+	case Direction::UP:
 		return "UP";
-	case DOWN:
+	case Direction::DOWN:
 		return "DOWN";
-	case LEFT:
+	case Direction::LEFT:
 		return "LEFT";
-	case RIGHT:
+	case Direction::RIGHT:
 		return "RIGHT";
 	default:
 		return "(none)";
@@ -45,8 +45,8 @@ Segment::Segment() {
  */
 std::string Segment::to_string() {
 	std::string str = "{index: " + std::to_string(index) + ", next: "
-	        + (next == NULL ? "NULL" : std::to_string(next->index)) + ", prev: "
-	        + (prev == NULL ? "NULL" : std::to_string(prev->index)) + ", p: "
+	        + (next == nullptr ? "nullptr" : std::to_string(next->index)) + ", prev: "
+	        + (prev == nullptr ? "nullptr" : std::to_string(prev->index)) + ", p: "
 	        + point->to_string() + "}";
 	return str;
 }
@@ -61,19 +61,19 @@ Point* Snake::get_next_move() {
 	int ny = 0;
 	Direction direction = this->direction;
 	switch (direction) {
-	case UP:
+	case Direction::UP:
 		nx = 0;
 		ny = -1;
 		break;
-	case DOWN:
+	case Direction::DOWN:
 		nx = 0;
 		ny = 1;
 		break;
-	case LEFT:
+	case Direction::LEFT:
 		nx = -1;
 		ny = 0;
 		break;
-	case RIGHT:
+	case Direction::RIGHT:
 		nx = 1;
 		ny = 0;
 		break;
@@ -93,22 +93,22 @@ void Snake::grow(Point* point) {
 
 	// set head == tail
 	if (segment_count == 0) {
-		new_head->prev = NULL;
-		new_head->next = NULL;
+		new_head->prev = nullptr;
+		new_head->next = nullptr;
 		head = new_head;
 		tail = new_head;
 	}
 	// decouple head and tail
 	else if (segment_count == 1) {
-		new_head->prev = NULL;
+		new_head->prev = nullptr;
 		new_head->next = tail;
 		new_head->next->prev = new_head;
-		new_head->next->next = NULL;
+		new_head->next->next = nullptr;
 		head = new_head;
 	}
 	// general case movement
 	else {
-		new_head->prev = NULL;
+		new_head->prev = nullptr;
 		new_head->next = head;
 		new_head->next->prev = new_head;
 		head = new_head;
@@ -126,7 +126,7 @@ void Snake::move(Point* point) {
 
 	Segment* old_tail = tail;
 	tail = tail->prev;
-	tail->next = NULL;
+	tail->next = nullptr;
 	old_tail->point->Point::~Point();
 	old_tail->Segment::~Segment();
 }
@@ -138,7 +138,7 @@ void Snake::move(Point* point) {
  *         else false.
  */
 bool Snake::contains(Point* point) {
-	for (Segment* s = head; s != NULL; s = s->next) {
+	for (Segment* s = head; s != nullptr; s = s->next) {
 		if (point->equals(s->point)) {
 			return true;
 		}

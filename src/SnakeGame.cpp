@@ -8,7 +8,9 @@
 
 #include <iostream>
 #include <string>
+#include <cstring>
 #include <random>
+#include <regex>
 
 #include <ncurses.h>
 #include <stdbool.h>
@@ -18,6 +20,10 @@
 #include "Point.h"
 #include "Keys.h"
 #include "Snake.h"
+
+#define ENUM_CAST(e) static_cast<typename std::underlying_type<Direction>::type>(e)
+#define STD_COUT(value) std::cout << value << std::endl
+#define STD_ENDL() std::cout << std::endl
 
 /**
  * Read the user input.  Intended to be run on a separate thread
@@ -33,8 +39,8 @@ void* read_user_input(void* vargp) {
 		case A_KEY_H:
 		case A_KEY_LEFT:
 		case KEY_LEFT:
-			if (snake->direction != LEFT && snake->direction != RIGHT) {
-				snake->direction = LEFT;
+			if (snake->direction != Direction::LEFT && snake->direction != Direction::RIGHT) {
+				snake->direction = Direction::LEFT;
 				snake->pause = false;
 			}
 			break;
@@ -42,8 +48,8 @@ void* read_user_input(void* vargp) {
 		case A_KEY_J:
 		case A_KEY_DOWN:
 		case KEY_DOWN:
-			if (snake->direction != DOWN && snake->direction != UP) {
-				snake->direction = DOWN;
+			if (snake->direction != Direction::DOWN && snake->direction != Direction::UP) {
+				snake->direction = Direction::DOWN;
 				snake->pause = false;
 			}
 			break;
@@ -51,8 +57,8 @@ void* read_user_input(void* vargp) {
 		case A_KEY_K:
 		case A_KEY_UP:
 		case KEY_UP:
-			if (snake->direction != UP && snake->direction != DOWN) {
-				snake->direction = UP;
+			if (snake->direction != Direction::UP && snake->direction != Direction::DOWN) {
+				snake->direction = Direction::UP;
 				snake->pause = false;
 			}
 			break;
@@ -60,8 +66,8 @@ void* read_user_input(void* vargp) {
 		case A_KEY_L:
 		case A_KEY_RIGHT:
 		case KEY_RIGHT:
-			if (snake->direction != RIGHT && snake->direction != LEFT) {
-				snake->direction = RIGHT;
+			if (snake->direction != Direction::RIGHT && snake->direction != Direction::LEFT) {
+				snake->direction = Direction::RIGHT;
 				snake->pause = false;
 			}
 			break;
@@ -79,7 +85,7 @@ void* read_user_input(void* vargp) {
 //			break;
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
 /**
@@ -134,7 +140,7 @@ void init_colors() {
 /**
  * Used to define the game's difficulty setting.
  */
-enum Difficulty {
+enum class Difficulty {
 	EASY, NORMAL, HARD
 };
 
@@ -144,6 +150,7 @@ enum Difficulty {
 struct CliArgs {
 	Difficulty difficulty;
 	bool sync_frame_rate;
+	bool enable_colors;
 	int esc_delay;
 };
 
@@ -154,42 +161,48 @@ struct CliArgs {
  * @return The Difficulty, if one can be parsed from the arguments.
  */
 CliArgs parse_cli_args(int argc, char** argv) {
-	Difficulty difficulty = NORMAL;
+	Difficulty difficulty = Difficulty::NORMAL;
 	bool sync_frame_rate = false;
 	int esc_delay = 100;
 
 	bool display_help = false;
-	bool unknown_arg = false;
-	std::string unknown_arg_str;
+	bool enable_colors = true;
+
+	std::string unknown_arg;
 
 	std::string esc_delay_prefix = "--esc_delay=";
 	std::string e_prefix = "-e";
 
-	int di = 0, si = 0, ei = 0;
+	int hi = 0, di = 0, si = 0, ci = 0, ei = 0;
 
 	for (int i = 1; i < argc; i++) {
 		std::string arg = argv[i];
 
 		// first try difficulty
-		if (arg.compare("help") == 0 ) {
+		if (arg.compare("help") == 0 || arg.compare("--help") == 0 ) {
 			display_help = true;
-			break;
+			hi++;
 		} else if (arg.compare("easy") == 0) {
-			difficulty = EASY;
+			difficulty = Difficulty::EASY;
 			di++;
 		} else if (arg.compare("normal") == 0) {
-			difficulty = NORMAL;
+			difficulty = Difficulty::NORMAL;
 			di++;
 		} else if (arg.compare("hard") == 0) {
-			difficulty = HARD;
+			difficulty = Difficulty::HARD;
 			di++;
 		}
 		// next try sync_frame_rate
-		else if (arg.compare("--sync_frame_rate") == 0 || arg.compare("-s") == 0) {
+		else if (arg.compare("--sync_frame_rate") == 0) {
 			sync_frame_rate = true;
 			si++;
 		}
-		// else  try esc_delay
+		// next try disable_color
+		else if (arg.compare("--disable_colors") == 0) {
+			enable_colors = false;
+			ci++;
+		}
+		// next try esc_delay
 		else if (arg.rfind(esc_delay_prefix, 0) == 0) {
 			std::string substr = arg.substr(esc_delay_prefix.length());
 			esc_delay = atoi(substr.c_str());
@@ -199,48 +212,69 @@ CliArgs parse_cli_args(int argc, char** argv) {
 			esc_delay = atoi(substr.c_str());
 			ei++;
 		}
+		// else try optional flags
+		else if (std::regex_match(arg, std::regex("-[dhs]{1,2}"))) {
+			for (unsigned int i = 1; i < arg.length(); i++) {
+				char c = arg[i];
+				switch (c) {
+				case 'd':
+					enable_colors = false;
+					ci++;
+					break;
+				case 'h':
+					display_help = false;
+					di++;
+					break;
+				case 's':
+					sync_frame_rate = true;
+					si++;
+					break;
+				}
+			}
+
+		}
 		// otherwise it is unknown
 		else {
-			unknown_arg = true;
+			unknown_arg = arg;
 			break;
 		}
 	}
-	bool duplicate_args = di > 1 || si > 1 || ei > 1;
+	bool duplicate_args = hi > 1 || di > 1 || si > 1 || ci > 1 || ei > 1;
 
 	// print usage info if inputs are invalid
-	if (display_help || unknown_arg || duplicate_args || argc > 4 || esc_delay < 100) {
+	if (display_help || unknown_arg.length() > 0 || duplicate_args || esc_delay < 100) {
 		if (display_help) {
-			std::cout << "Help info:" << std::endl;
-		} else if (unknown_arg) {
-			std::cout << "Unknown argument: " << unknown_arg_str << std::endl;
+			STD_COUT("Help info:");
+		} else if (unknown_arg.length() > 0) {
+			STD_COUT("Unknown argument: " << unknown_arg);
 		} else if (duplicate_args) {
-			std::cout << "Duplicate arguments." << std::endl;
+			STD_COUT("Duplicate arguments.");
 		} else if (argc > 4) {
-			std::cout << "Too many arguments." << std::endl;
+			STD_COUT("Too many arguments.");
 		} else if (esc_delay < 100) {
-			std::cout << "esc_delay of " << esc_delay << " is too small." << std::endl;
+			STD_COUT("esc_delay of " << esc_delay << " is too small.");
 		}
-		std::cout << std::endl;
-		std::cout << "Usage: SnakeGame [ {easy|normal|hard} --esc_delay=milliseconds";
-		std::cout << " --sync_frame_rate ]" << std::endl;
-		std::cout << std::endl;
-		std::cout << "Difficulty setting defaults to \"normal\"." << std::endl;
-		std::cout << "\"--esc_delay\" (-eMilliseconds) defaults to 100, and must be >= 100.";
-		std::cout << std::endl;
-		std::cout << "\"--sync_frame_rate\" (-s) synchronizes horizontal and vertical frame rates.";
-		std::cout << std::endl;
-		std::cout << std::endl;
-		std::cout << "Frame rates are by default faster horizontally to offset differences";
-		std::cout << " in character height and width." << std::endl;
-		std::cout << "If the game immediately quits as a result of pressing the arrow keys, try a";
-		std::cout << " larger esc_delay." << std::endl;
+		STD_ENDL();
+		STD_COUT("Usage: SnakeGame [ {easy|normal|hard} -dhs -eMilliseconds ]");
+		STD_ENDL();
+		STD_COUT("Difficulty setting defaults to \"normal\".");
+		STD_ENDL();
+		STD_COUT("Options:");
+		STD_COUT("\"--disable_colors\" (-d) disables color output.");
+		STD_COUT("\"--esc_delay=milliseconds\" (-eMilliseconds) defaults to 100, and must be >= 100.");
+		STD_COUT("\"--help\" (-h) displays this help info.");
+		STD_COUT("\"--sync_frame_rate\" (-s) synchronizes horizontal and vertical frame rates.");
+		STD_ENDL();
+		STD_ENDL();
+		STD_COUT("Frame rates are by default faster horizontally to offset differences"
+				<< " in character height and width.");
+		STD_COUT("If the game immediately quits as a result of pressing the arrow keys, try a"
+				<< " larger esc_delay.");
 		exit(0);
 	}
-	CliArgs cli_args = { difficulty, sync_frame_rate, esc_delay };
+	CliArgs cli_args = { difficulty, sync_frame_rate, enable_colors, esc_delay };
 	return cli_args;
 }
-
-
 
 /**
  * Run the game.
@@ -253,24 +287,25 @@ void snake_game(int argc, char** argv) {
 
 	Difficulty difficulty = cli_args.difficulty;
 	bool sync_frame_rate = cli_args.sync_frame_rate;
+	bool enable_colors = cli_args.enable_colors;
 	int esc_delay = cli_args.esc_delay;
 
 	long sleep_ms_horizontal;
 	long sleep_ms_vertical;
 
-	if (difficulty == EASY) {
+	if (difficulty == Difficulty::EASY) {
 		sleep_ms_horizontal = 66 * 1000;
 		sleep_ms_vertical = 110 * 1000;
-	} else if (difficulty == NORMAL) {
+	} else if (difficulty == Difficulty::NORMAL) {
 		sleep_ms_horizontal = 44 * 1000;
 		sleep_ms_vertical = 77 * 1000;
-	} else if (difficulty == HARD) {
+	} else if (difficulty == Difficulty::HARD) {
 		sleep_ms_horizontal = 22 * 1000;
 		sleep_ms_vertical = 34 * 1000;
 	} else {
 		// unreachable code
-		std::cout << "Unexpected error, difficulty = UNDEFINED." << std::endl;
-		std::cout << "Exiting SnakeGame." << std::endl;
+		STD_COUT("Unexpected error, difficulty = UNDEFINED.");
+		STD_COUT("Exiting SnakeGame.");
 		exit(0);
 	}
 
@@ -285,7 +320,9 @@ void snake_game(int argc, char** argv) {
 	keypad(stdscr, TRUE);
 	ESCDELAY = esc_delay;
 
-	init_colors();
+	if (enable_colors) {
+		init_colors();
+	}
 
 	int width = COLS;
 	int height = LINES;
@@ -305,7 +342,7 @@ void snake_game(int argc, char** argv) {
 
 	// initialize the Snake
 	Snake* snake = new Snake();
-	snake->direction = RIGHT;
+	snake->direction = Direction::RIGHT;
 	Point* start = new Point(width / 2, height / 2);
 	snake->grow(start);
 
@@ -327,13 +364,13 @@ void snake_game(int argc, char** argv) {
 
 	// read user input on a separate thread.
 	pthread_t read_input_thread;
-	pthread_create(&read_input_thread, NULL, read_user_input, (void*) snake);
+	pthread_create(&read_input_thread, nullptr, read_user_input, (void*) snake);
 
 	// game loop
 	while (true) {
 
 		// sleep to control frame rate
-		if (snake->direction == LEFT || snake->direction == RIGHT) {
+		if (snake->direction == Direction::LEFT || snake->direction == Direction::RIGHT) {
 			usleep(sleep_ms_horizontal);
 		} else {
 			usleep(sleep_ms_vertical);
@@ -384,7 +421,7 @@ void snake_game(int argc, char** argv) {
 			refresh();
 
 			snake->game_over = true;
-			pthread_join(read_input_thread, NULL);
+			pthread_join(read_input_thread, nullptr);
 
 			endwin();
 			exit(0);
@@ -435,7 +472,7 @@ void snake_game(int argc, char** argv) {
 				refresh();
 
 				snake->game_over = true;
-				pthread_join(read_input_thread, NULL);
+				pthread_join(read_input_thread, nullptr);
 
 				endwin();
 				exit(0);
@@ -476,51 +513,51 @@ void test_snake_segments() {
 	Point* start_pos = new Point(1, 1);
 	snake->grow(start_pos);
 
-	std::cout << "Snake:" << std::endl;
-	std::cout << "-------" << std::endl;
-	std::cout << "direction: " << snake->direction << std::endl;
-	std::cout << "head: " << snake->head->to_string() << std::endl;
-	std::cout << "tail: " << snake->tail->to_string() << std::endl;
-	std::cout << "segment_count: " << snake->segment_count << std::endl;
+	STD_COUT("Snake:");
+	STD_COUT("-------");
+	STD_COUT("direction: " << ENUM_CAST(snake->direction));
+	STD_COUT("head: " << snake->head->to_string());
+	STD_COUT("tail: " << snake->tail->to_string());
+	STD_COUT("segment_count: " << snake->segment_count);
 
-	for (Segment* s = snake->head; s != NULL; s = s->next) {
-		std::cout << "    segment: " << snake->head->to_string() << std::endl;
+	for (Segment* s = snake->head; s != nullptr; s = s->next) {
+		STD_COUT("    segment: " << snake->head->to_string());
 	}
-	std::cout << std::endl;
+	STD_ENDL();
 
 	snake->grow(new Point(1, 2));
-	std::cout << "direction: " << snake->direction << std::endl;
-	std::cout << "head: " << snake->head->to_string() << std::endl;
-	std::cout << "tail: " << snake->tail->to_string() << std::endl;
-	std::cout << "segment_count: " << snake->segment_count << std::endl;
+	STD_COUT("direction: " << ENUM_CAST(snake->direction));
+	STD_COUT("head: " << snake->head->to_string());
+	STD_COUT("tail: " << snake->tail->to_string());
+	STD_COUT("segment_count: " << snake->segment_count);
 
-	for (Segment* s = snake->head; s != NULL; s = s->next) {
-		std::cout << "    segment: " << s->to_string() << std::endl;
+	for (Segment* s = snake->head; s != nullptr; s = s->next) {
+		STD_COUT("    segment: " << s->to_string());
 	}
-	std::cout << std::endl;
+	STD_ENDL();
 
 	snake->grow(new Point(1, 3));
 	snake->grow(new Point(1, 4));
-	std::cout << "direction: " << snake->direction << std::endl;
-	std::cout << "head: " << snake->head->to_string() << std::endl;
-	std::cout << "tail: " << snake->tail->to_string() << std::endl;
-	std::cout << "segment_count: " << snake->segment_count << std::endl;
+	STD_COUT("direction: " << ENUM_CAST(snake->direction));
+	STD_COUT("head: " << snake->head->to_string());
+	STD_COUT("tail: " << snake->tail->to_string());
+	STD_COUT("segment_count: " << snake->segment_count);
 
-	for (Segment* s = snake->head; s != NULL; s = s->next) {
-		std::cout << "    segment: " << s->to_string() << std::endl;
+	for (Segment* s = snake->head; s != nullptr; s = s->next) {
+		STD_COUT("    segment: " << s->to_string());
 	}
-	std::cout << std::endl;
+	STD_ENDL();
 
 	snake->move(new Point(2, 4));
-	std::cout << "direction: " << snake->direction << std::endl;
-	std::cout << "head: " << snake->head->to_string() << std::endl;
-	std::cout << "tail: " << snake->tail->to_string() << std::endl;
-	std::cout << "segment_count: " << snake->segment_count << std::endl;
+	STD_COUT("direction: " << ENUM_CAST(snake->direction));
+	STD_COUT("head: " << snake->head->to_string());
+	STD_COUT("tail: " << snake->tail->to_string());
+	STD_COUT("segment_count: " << snake->segment_count);
 
-	for (Segment* s = snake->head; s != NULL; s = s->next) {
-		std::cout << "    segment: " << s->to_string() << std::endl;
+	for (Segment* s = snake->head; s != nullptr; s = s->next) {
+		STD_COUT("    segment: " << s->to_string());
 	}
-	std::cout << std::endl;
+	STD_ENDL();
 }
 
 /**
