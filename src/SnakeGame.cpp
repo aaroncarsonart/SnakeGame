@@ -222,8 +222,8 @@ CliArgs parse_cli_args(int argc, char** argv) {
 					ci++;
 					break;
 				case 'h':
-					display_help = false;
-					di++;
+					display_help = true;
+					hi++;
 					break;
 				case 's':
 					sync_frame_rate = true;
