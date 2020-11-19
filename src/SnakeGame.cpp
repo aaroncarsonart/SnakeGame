@@ -22,8 +22,6 @@
 #include "Snake.h"
 
 #define ENUM_CAST(e) static_cast<typename std::underlying_type<Direction>::type>(e)
-#define STD_COUT(value) std::cout << value << std::endl
-#define STD_ENDL() std::cout << std::endl
 
 /**
  * Read the user input.  Intended to be run on a separate thread
@@ -244,32 +242,34 @@ CliArgs parse_cli_args(int argc, char** argv) {
 	// print usage info if inputs are invalid
 	if (display_help || unknown_arg.length() > 0 || duplicate_args || esc_delay < 100) {
 		if (display_help) {
-			STD_COUT("Help info:");
+			std::cout << "Help info:" << std::endl;
 		} else if (unknown_arg.length() > 0) {
-			STD_COUT("Unknown argument: " << unknown_arg);
+			std::cout << "Unknown argument: " << unknown_arg << std::endl;
 		} else if (duplicate_args) {
-			STD_COUT("Duplicate arguments.");
+			std::cout << "Duplicate arguments." << std::endl;
 		} else if (argc > 4) {
-			STD_COUT("Too many arguments.");
+			std::cout << "Too many arguments." << std::endl;
 		} else if (esc_delay < 100) {
-			STD_COUT("esc_delay of " << esc_delay << " is too small.");
+			std::cout << "esc_delay of " << esc_delay << " is too small." << std::endl;
 		}
-		STD_ENDL();
-		STD_COUT("Usage: SnakeGame [ {easy|normal|hard} -dhs -eMilliseconds ]");
-		STD_ENDL();
-		STD_COUT("Difficulty setting defaults to \"normal\".");
-		STD_ENDL();
-		STD_COUT("Options:");
-		STD_COUT("\"--disable_colors\" (-d) disables color output.");
-		STD_COUT("\"--esc_delay=milliseconds\" (-eMilliseconds) defaults to 100, and must be >= 100.");
-		STD_COUT("\"--help\" (-h) displays this help info.");
-		STD_COUT("\"--sync_frame_rate\" (-s) synchronizes horizontal and vertical frame rates.");
-		STD_ENDL();
-		STD_ENDL();
-		STD_COUT("Frame rates are by default faster horizontally to offset differences"
-				<< " in character height and width.");
-		STD_COUT("If the game immediately quits as a result of pressing the arrow keys, try a"
-				<< " larger esc_delay.");
+		std::cout << std::endl;
+		std::cout << "Usage: SnakeGame [ {easy|normal|hard} -dhs -eMilliseconds ]" << std::endl;
+		std::cout << std::endl;
+		std::cout << "Difficulty setting defaults to \"normal\"." << std::endl;
+		std::cout << std::endl;
+		std::cout << "Options:" << std::endl;
+		std::cout << "\"--disable_colors\" (-d) disables color output." << std::endl;
+		std::cout << "\"--esc_delay=milliseconds\" (-eMilliseconds) defaults to 100, and must be >="
+		          << "100." << std::endl;
+		std::cout << "\"--help\" (-h) displays this help info." << std::endl;
+		std::cout << "\"--sync_frame_rate\" (-s) synchronizes horizontal and vertical frame rates."
+		          << std::endl;
+		std::cout << std::endl;
+		std::cout << std::endl;
+		std::cout << "Frame rates are by default faster horizontally to offset differences in "
+		          << "character height and width." << std::endl;
+		std::cout << "If the game immediately quits as a result of pressing the arrow keys, try a "
+		          << "larger esc_delay." << std::endl;
 		exit(0);
 	}
 	CliArgs cli_args = { difficulty, sync_frame_rate, enable_colors, esc_delay };
@@ -304,8 +304,8 @@ void snake_game(int argc, char** argv) {
 		sleep_ms_vertical = 34 * 1000;
 	} else {
 		// unreachable code
-		STD_COUT("Unexpected error, difficulty = UNDEFINED.");
-		STD_COUT("Exiting SnakeGame.");
+		std::cout << "Unexpected error, difficulty = UNDEFINED." << std::endl;
+		std::cout << "Exiting SnakeGame." << std::endl;
 		exit(0);
 	}
 
@@ -505,6 +505,24 @@ void snake_game(int argc, char** argv) {
 }
 
 /**
+ * Print the fields of the given Snake struct.
+ * @param snake The Snake to print the fields of.
+ */
+void print_fields(Snake* snake) {
+	std::cout << "Snake:" << std::endl;
+	std::cout << "-------" << std::endl;
+	std::cout << "direction: " << ENUM_CAST(snake->direction) << std::endl;
+	std::cout << "head: " << snake->head->to_string() << std::endl;
+	std::cout << "tail: " << snake->tail->to_string() << std::endl;
+	std::cout << "segment_count: " << snake->segment_count << std::endl;
+
+	for (Segment* s = snake->head; s != nullptr; s = s->next) {
+		std::cout << "    segment: " << s->to_string() << std::endl;
+	}
+	std::cout << std::endl;
+}
+
+/**
  * Test function to verify the accurateness of Snake and Segment's
  * linked-list functionality.
  */
@@ -512,52 +530,17 @@ void test_snake_segments() {
 	Snake* snake = new Snake();
 	Point* start_pos = new Point(1, 1);
 	snake->grow(start_pos);
-
-	STD_COUT("Snake:");
-	STD_COUT("-------");
-	STD_COUT("direction: " << ENUM_CAST(snake->direction));
-	STD_COUT("head: " << snake->head->to_string());
-	STD_COUT("tail: " << snake->tail->to_string());
-	STD_COUT("segment_count: " << snake->segment_count);
-
-	for (Segment* s = snake->head; s != nullptr; s = s->next) {
-		STD_COUT("    segment: " << snake->head->to_string());
-	}
-	STD_ENDL();
+	print_fields(snake);
 
 	snake->grow(new Point(1, 2));
-	STD_COUT("direction: " << ENUM_CAST(snake->direction));
-	STD_COUT("head: " << snake->head->to_string());
-	STD_COUT("tail: " << snake->tail->to_string());
-	STD_COUT("segment_count: " << snake->segment_count);
-
-	for (Segment* s = snake->head; s != nullptr; s = s->next) {
-		STD_COUT("    segment: " << s->to_string());
-	}
-	STD_ENDL();
+	print_fields(snake);
 
 	snake->grow(new Point(1, 3));
 	snake->grow(new Point(1, 4));
-	STD_COUT("direction: " << ENUM_CAST(snake->direction));
-	STD_COUT("head: " << snake->head->to_string());
-	STD_COUT("tail: " << snake->tail->to_string());
-	STD_COUT("segment_count: " << snake->segment_count);
-
-	for (Segment* s = snake->head; s != nullptr; s = s->next) {
-		STD_COUT("    segment: " << s->to_string());
-	}
-	STD_ENDL();
+	print_fields(snake);
 
 	snake->move(new Point(2, 4));
-	STD_COUT("direction: " << ENUM_CAST(snake->direction));
-	STD_COUT("head: " << snake->head->to_string());
-	STD_COUT("tail: " << snake->tail->to_string());
-	STD_COUT("segment_count: " << snake->segment_count);
-
-	for (Segment* s = snake->head; s != nullptr; s = s->next) {
-		STD_COUT("    segment: " << s->to_string());
-	}
-	STD_ENDL();
+	print_fields(snake);
 }
 
 /**
