@@ -353,7 +353,7 @@ void snake_game(int argc, char** argv) {
 		treasure = get_random_point();
 		generate_treasure = snake->contains(treasure);
 		if (generate_treasure) {
-			treasure->Point::~Point();
+			delete treasure;
 		}
 	}
 	attron(COLOR_PAIR(YELLOW));
@@ -484,7 +484,7 @@ void snake_game(int argc, char** argv) {
 				treasure = get_random_point();
 				generate_treasure = snake->contains(treasure);
 				if (generate_treasure) {
-					treasure->Point::~Point();
+					delete treasure;
 				}
 			}
 			// draw new treasure

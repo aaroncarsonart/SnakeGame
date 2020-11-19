@@ -127,8 +127,8 @@ void Snake::move(Point* point) {
 	Segment* old_tail = tail;
 	tail = tail->prev;
 	tail->next = nullptr;
-	old_tail->point->Point::~Point();
-	old_tail->Segment::~Segment();
+	delete old_tail->point;
+	delete old_tail;
 }
 
 /**
