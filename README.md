@@ -1,6 +1,9 @@
 # SnakeGame
 The classic [snake game](https://en.wikipedia.org/wiki/Snake_(video_game_genre)), implemented in C++ for my (and your) pleasure to run in the terminal.
 
+## License
+This project is licensed under the [MIT license](LICENSE.txt).
+
 ## Compile
 ```
 g++ -std=c++17 src/Snake.cpp src/SnakeGame.cpp -lncurses -o SnakeGame
